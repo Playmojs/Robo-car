@@ -4,63 +4,80 @@ int pinRB=10; // define pin10 as right back connect with IN3
 int pinRF=11; // define pin11 as right forward connect with IN4
 int EnA = 8;
 int EnB = 7;
+int input_pin = A2;
+int output_pin = A3;
 int active_input = 1000;
 
 
 void setup()
 {
-Serial.begin(115200);
-Serial.setTimeout(1);
-pinMode(pinLB,OUTPUT);
-pinMode(pinLF,OUTPUT);
-pinMode(pinRB,OUTPUT);
-pinMode(pinRF,OUTPUT);
-pinMode(EnA, OUTPUT);
-pinMode(EnB, OUTPUT);
+   Serial.begin(115200);
+   Serial.setTimeout(1);
+   pinMode(pinLB,OUTPUT);
+   pinMode(pinLF,OUTPUT);
+   pinMode(pinRB,OUTPUT);
+   pinMode(pinRF,OUTPUT);
+   pinMode(EnA, OUTPUT);
+   pinMode(EnB, OUTPUT);
+   pinMode(LED_BUILTIN, OUTPUT);
+   pinMode(input_pin, INPUT);
+   pinMode(output_pin, OUTPUT);
 
 }
-void advance() // forward
+void Advance() // forward
 {
-digitalWrite(pinRB,LOW);
-digitalWrite(pinRF,HIGH);
-digitalWrite(pinLB,LOW);
-digitalWrite(pinLF,HIGH);
-analogWrite(EnA, 255);
-analogWrite(EnB, 255);
+   digitalWrite(pinRB,LOW);
+   digitalWrite(pinRF,HIGH);
+   digitalWrite(pinLB,LOW);
+   digitalWrite(pinLF,HIGH);
+   analogWrite(EnA, 255);
+   analogWrite(EnB, 255);
 }
-void turnL() //turn left
+void TurnL() //turn left
 {
-digitalWrite(pinRB,LOW);
-digitalWrite(pinRF,HIGH);
-digitalWrite(pinLB,HIGH);
-digitalWrite(pinLF,LOW);
-analogWrite(EnA, 150);
-analogWrite(EnB, 150);
+   digitalWrite(pinRB,LOW);
+   digitalWrite(pinRF,HIGH);
+   digitalWrite(pinLB,HIGH);
+   digitalWrite(pinLF,LOW);
+   analogWrite(EnA, 150);
+   analogWrite(EnB, 150);
 }
-void turnR() //turn right
+void TurnR() //turn right
 {
-digitalWrite(pinRB,HIGH);
-digitalWrite(pinRF,LOW);
-digitalWrite(pinLB,LOW);
-digitalWrite(pinLF,HIGH);
-analogWrite(EnA, 150);
-analogWrite(EnB, 150);
+   digitalWrite(pinRB,HIGH);
+   digitalWrite(pinRF,LOW);
+   digitalWrite(pinLB,LOW);
+   digitalWrite(pinLF,HIGH);
+   analogWrite(EnA, 150);
+   analogWrite(EnB, 150);
 }
-void stop() //stop
+void Stop() //stop
 {
-digitalWrite(pinRB,HIGH);
-digitalWrite(pinRF,HIGH);
-digitalWrite(pinLB,HIGH);
-digitalWrite(pinLF,HIGH);
+   digitalWrite(pinRB,HIGH);
+   digitalWrite(pinRF,HIGH);
+   digitalWrite(pinLB,HIGH);
+   digitalWrite(pinLF,HIGH);
 }
-void back() //back
+void Back() //back
 {
-digitalWrite(pinRB,HIGH);
-digitalWrite(pinRF,LOW);
-digitalWrite(pinLB,HIGH);
-digitalWrite(pinLF,LOW);
-analogWrite(EnA, 180);
-analogWrite(EnB, 180);
+   digitalWrite(pinRB,HIGH);
+   digitalWrite(pinRF,LOW);
+   digitalWrite(pinLB,HIGH);
+   digitalWrite(pinLF,LOW);
+   analogWrite(EnA, 180);
+   analogWrite(EnB, 180);
+}
+
+float Distance() // test forward distance
+{
+    digitalWrite(output_pin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(output_pin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(output_pin, LOW);
+    float Fdistance = pulseIn(input_pin, HIGH);
+    Fdistance= Fdistance/5.8/10;
+    return(Fdistance);
 }
 
 void loop()
@@ -73,29 +90,35 @@ void loop()
       if (input != 0 && *input != active_input)
       {
          active_input = *input;
-      
       }
    }
 
    if (active_input == 'w')
    {
-      advance();
+      Advance();
    }
    else if (active_input =='a')
    {
-      turnL();
+      TurnL();
    }
    else if (active_input =='s')
    {
-      back();
+      Back();
    }
    else if (active_input =='d')
    {
-      turnR();
+      TurnR();
    }
    else
    {
-      stop();
+      Stop();
    }
+   float distance = Distance();
+   Serial.println(distance);
+   if (distance == 0){return;}
+   if (distance < 10)
+      {digitalWrite(LED_BUILTIN, HIGH);} 
+   else                     
+      {digitalWrite(LED_BUILTIN, LOW);}
    delay(20);
 }

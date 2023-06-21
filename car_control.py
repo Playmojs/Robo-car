@@ -19,7 +19,6 @@ print ("press 'escape' to quit, drive with WASD")
 
 while 1:
     input = msvcrt.getch().decode() if msvcrt.kbhit() else chr(1000)
-    print(input)
 
     if ord(input) == 27:
         break
