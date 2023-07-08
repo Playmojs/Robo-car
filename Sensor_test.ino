@@ -1,5 +1,5 @@
-// int input_pin = A2;
-// int output_pin = A3;
+// int input_pin = A1;
+// int output_pin = A2;
 
 // void setup() {
 //     Serial.begin(115200);

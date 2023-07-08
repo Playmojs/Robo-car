@@ -1,18 +1,24 @@
+#include <SoftwareSerial.h>
+#include <Servo.h>
+
+bool stopped = false;
 int pinLB=6; // define pin6 as left back connect with IN1
 int pinLF=9; // define pin9 as left forward connect with IN2
 int pinRB=10; // define pin10 as right back connect with IN3
 int pinRF=11; // define pin11 as right forward connect with IN4
 int EnA = 8;
 int EnB = 7;
-int input_pin = A2;
-int output_pin = A3;
+int input_pin = A1;
+int output_pin = A2;
 int active_input = 1000;
+SoftwareSerial mySerial(2,3); 
+Servo servo;
 
 
 void setup()
 {
-   Serial.begin(115200);
-   Serial.setTimeout(1);
+   mySerial.begin(9600);
+   mySerial.setTimeout(1);
    pinMode(pinLB,OUTPUT);
    pinMode(pinLF,OUTPUT);
    pinMode(pinRB,OUTPUT);
@@ -22,7 +28,7 @@ void setup()
    pinMode(LED_BUILTIN, OUTPUT);
    pinMode(input_pin, INPUT);
    pinMode(output_pin, OUTPUT);
-
+   servo.attach(5);
 }
 void Advance() // forward
 {
@@ -80,45 +86,80 @@ float Distance() // test forward distance
     return(Fdistance);
 }
 
+void FloatToBytes(float val,byte* bytes_array){
+  // Create union of shared memory space
+  union {
+    float float_variable;
+    byte temp_array[4];
+  } u;
+  // Overite bytes of union with float variable
+  u.float_variable = val;
+  // Assign bytes to input array
+  memcpy(bytes_array, u.temp_array, 4);
+}
+
 void loop()
 {
-   String in = "";
-   if (Serial.available())
-   {
-      in = Serial.readString();   
-      const char* input = in.c_str();
-      if (input != 0 && *input != active_input)
-      {
-         active_input = *input;
-      }
-   }
+    String in = "";
+    if (mySerial.available())
+    {
+        in = mySerial.readStringUntil(':');   
+        const char* input = in.c_str();
+        if (input != 0 && *input != active_input)
+        {
+            active_input = *input;
+            mySerial.print("V:Verify ");
+            mySerial.print(active_input);
+            mySerial.println(":");
+        }
+    }
 
-   if (active_input == 'w')
-   {
-      Advance();
-   }
-   else if (active_input =='a')
-   {
-      TurnL();
-   }
-   else if (active_input =='s')
-   {
-      Back();
-   }
-   else if (active_input =='d')
-   {
-      TurnR();
-   }
-   else
-   {
-      Stop();
-   }
-   float distance = Distance();
-   Serial.println(distance);
-   if (distance == 0){return;}
-   if (distance < 10)
-      {digitalWrite(LED_BUILTIN, HIGH);} 
-   else                     
-      {digitalWrite(LED_BUILTIN, LOW);}
-   delay(20);
+    if (active_input == 'w')
+    {
+        Advance();
+        stopped = false;
+    }
+    else if (active_input =='a')
+    {
+        TurnL();
+        stopped = false;
+    }
+    else if (active_input =='s')
+    {
+        Back();
+        stopped = false;
+    }
+    else if (active_input =='d')
+    {
+        TurnR();
+        stopped = false;
+    }
+    else if (active_input =='q')
+    {
+        Stop();
+        byte distances[4*37];
+        byte dist[4];
+        for(int i=0; i < 37; i++)
+        {
+            servo.write(5*i);
+            FloatToBytes(Distance(), dist);
+            for (int j= 0; j<4; j++)
+            {
+                distances[4*i + j] = dist[j];
+            }
+            delay(100);
+        }
+        mySerial.print("D:");
+        mySerial.write(distances, 148);
+        mySerial.println(":");
+        servo.write(90);
+        mySerial.flush();
+        active_input = 1000;
+    }
+        else if (!stopped)
+    {
+        Stop();
+        stopped = true;
+    }
+    //delay(20);
 }
