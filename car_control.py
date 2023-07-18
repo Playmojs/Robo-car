@@ -5,13 +5,14 @@ import struct
 
 import serial.tools.list_ports
 myports = [tuple(p) for p in list(serial.tools.list_ports.comports())]
-arduino_port = [port for port in myports if 'COM5' in port ][0]
+arduino_port = [port for port in myports if 'COM6' in port ][0]
 
 ser = serial.Serial(arduino_port[0], baudrate = 115200, timeout= 0.1, parity = "N")
 
 active_input = 1000
 buffer = 0
 driving_keys = ['w', 'a','s','d']
+function_keys = ['q', 'c']
 stopped = True
 output_queue = []
 
@@ -44,7 +45,7 @@ while 1:
             active_input = keyboard_input
             output_queue.append(active_input)
             stopped = True
-    elif keyboard_input == 'q' and keyboard_input != active_input:
+    elif keyboard_input in function_keys and keyboard_input != active_input:
         stopped = True
         active_input = keyboard_input
         output_queue.append(active_input)

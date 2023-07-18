@@ -1,5 +1,6 @@
 #include <SoftwareSerial.h>
 #include <Servo.h>
+#include <QMC5883LCompass.h>
 
 bool stopped = false;
 int pinLB=6; // define pin6 as left back connect with IN1
@@ -13,7 +14,7 @@ int output_pin = A2;
 int active_input = 1000;
 SoftwareSerial mySerial(2,3); 
 Servo servo;
-
+QMC5883LCompass compass;
 
 void setup()
 {
@@ -29,6 +30,9 @@ void setup()
    pinMode(input_pin, INPUT);
    pinMode(output_pin, OUTPUT);
    servo.attach(5);
+   Wire.begin();
+   compass.init();
+   compass.setCalibration(0, 1710, 0, 2116, -2132, 0);
 }
 void Advance() // forward
 {
@@ -156,10 +160,19 @@ void loop()
         mySerial.flush();
         active_input = 1000;
     }
+    else if (active_input == 'c')
+    {
+        Stop();
+        compass.read();
+        mySerial.print(compass.getAzimuth());
+        delay(500);
+        active_input = 1000;
+    }
         else if (!stopped)
     {
         Stop();
         stopped = true;
     }
+    
     //delay(20);
 }
