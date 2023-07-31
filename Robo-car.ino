@@ -1,4 +1,3 @@
-#include <SoftwareSerial.h>
 #include <Servo.h>
 #include <QMC5883LCompass.h>
 
@@ -12,14 +11,15 @@ int EnB = 7;
 int input_pin = A1;
 int output_pin = A2;
 int active_input = 1000;
-SoftwareSerial mySerial(2,3); 
+float initial_angle = 0;
+float scan_angle_interval = 50/9; // The applied head-rotation between each scan is 10/9 times the wanted angle, to correct for limited range in the servo
 Servo servo;
 QMC5883LCompass compass;
 
 void setup()
 {
-   mySerial.begin(9600);
-   mySerial.setTimeout(1);
+   Serial.begin(9600);
+   Serial.setTimeout(1);
    pinMode(pinLB,OUTPUT);
    pinMode(pinLF,OUTPUT);
    pinMode(pinRB,OUTPUT);
@@ -102,19 +102,30 @@ void FloatToBytes(float val,byte* bytes_array){
   memcpy(bytes_array, u.temp_array, 4);
 }
 
+float CorrectAngle(float angle, bool not_differential = true)
+{
+    return (angle-12*not_differential) * 10 / 9; 
+}
+
+template <typename value>
+void Verify(value to_print)
+{
+    Serial.print("V:Verify ");
+    Serial.print(to_print);
+    Serial.println(":");
+}
+
 void loop()
 {
     String in = "";
-    if (mySerial.available())
+    if (Serial.available())
     {
-        in = mySerial.readStringUntil(':');   
+        in = Serial.readStringUntil(':');
         const char* input = in.c_str();
-        if (input != 0 && *input != active_input)
+        if (*input != 0 && *input != active_input)
         {
             active_input = *input;
-            mySerial.print("V:Verify ");
-            mySerial.print(active_input);
-            mySerial.println(":");
+            Verify(active_input);
         }
     }
 
@@ -141,11 +152,13 @@ void loop()
     else if (active_input =='q')
     {
         Stop();
-        byte distances[4*37];
+        
+        int num_scans = ceil((180-initial_angle)/scan_angle_interval);
+        byte distances[4*num_scans];
         byte dist[4];
-        for(int i=0; i < 37; i++)
+        for(int i = 0; i < num_scans; i++)
         {
-            servo.write(5*i);
+            servo.write(initial_angle + i * scan_angle_interval);
             FloatToBytes(Distance(), dist);
             for (int j= 0; j<4; j++)
             {
@@ -153,22 +166,26 @@ void loop()
             }
             delay(100);
         }
-        mySerial.print("D:");
-        mySerial.write(distances, 148);
-        mySerial.println(":");
-        servo.write(90);
-        mySerial.flush();
+        Serial.print("D:");
+        Serial.print(num_scans);
+        Serial.print(":");
+        Serial.write(distances, 4*num_scans);
+        Serial.println(":");
+        servo.write(CorrectAngle(90));
+        Serial.flush();
         active_input = 1000;
     }
     else if (active_input == 'c')
     {
         Stop();
         compass.read();
-        mySerial.print(compass.getAzimuth());
+        Serial.print("C:");
+        Serial.print(compass.getAzimuth());
+        Serial.print(":");
         delay(500);
         active_input = 1000;
     }
-        else if (!stopped)
+    else if (!stopped)
     {
         Stop();
         stopped = true;
