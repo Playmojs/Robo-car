@@ -13,32 +13,31 @@ int EnB = 7;
 int input_pin = A1;
 int output_pin = A2;
 int active_input = 1000;
-float initial_angle = 0;
-float scan_angle_interval = 50/9; // The applied head-rotation between each scan is 10/9 times the wanted angle, to correct for limited range in the servo
+float corrected_head_rotation = 50.f/9.f; // The applied head-rotation between each scan is 10/9 times the wanted angle, to correct for limited range in the servo
 Servo servo;
 QMC5883LCompass compass;
 
-#line 19 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 18 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 void setup();
-#line 37 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 36 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 void Advance();
-#line 46 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 45 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 void TurnL();
-#line 55 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 54 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 void TurnR();
-#line 64 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 63 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 void Stop();
-#line 71 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 70 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 void Back();
-#line 81 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 80 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 float Distance();
-#line 93 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 92 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 void FloatToBytes(float val,byte* bytes_array);
-#line 109 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 108 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 template <typename value>void Verify(value to_print);
-#line 118 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 117 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 void loop();
-#line 19 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
+#line 18 "D:\\Programs\\Github Repositories\\Robo-car\\Robo-car.ino"
 void setup()
 {
    Serial.begin(9600);
@@ -55,7 +54,7 @@ void setup()
    servo.attach(5);
    Wire.begin();
    compass.init();
-   compass.setCalibration(0, 1710, 0, 2116, -2132, 0);
+   compass.setCalibration(0, 1822, 0, 2062, -2945, 0);
 }
 void Advance() // forward
 {
@@ -152,36 +151,39 @@ void loop()
         }
     }
 
-    if (active_input == 'w')
+    if (active_input == 'w') //forward
     {
         Advance();
         stopped = false;
     }
-    else if (active_input =='a')
+    else if (active_input =='a') //turn left
     {
         TurnL();
         stopped = false;
     }
-    else if (active_input =='s')
+    else if (active_input =='s') //turn right
     {
         Back();
         stopped = false;
     }
-    else if (active_input =='d')
+    else if (active_input =='d') //backwards
     {
         TurnR();
         stopped = false;
     }
-    else if (active_input =='q')
+    else if (active_input =='q') //scan at compass directions divisible by 5
     {
         Stop();
-        
-        int num_scans = ceil((180-initial_angle)/scan_angle_interval);
+        compass.read();
+        int direction = compass.getAzimuth();
+        float initial_angle = CorrectAngle(direction%5, false);
+
+        int num_scans = ceil((180-initial_angle)/corrected_head_rotation);
         byte distances[4*num_scans];
         byte dist[4];
         for(int i = 0; i < num_scans; i++)
         {
-            servo.write(initial_angle + i * scan_angle_interval);
+            servo.write(initial_angle + i * corrected_head_rotation);
             FloatToBytes(Distance(), dist);
             for (int j= 0; j<4; j++)
             {
@@ -190,6 +192,8 @@ void loop()
             delay(100);
         }
         Serial.print("D:");
+        Serial.print(direction);
+        Serial.print(":");
         Serial.print(num_scans);
         Serial.print(":");
         Serial.write(distances, 4*num_scans);
@@ -198,7 +202,7 @@ void loop()
         Serial.flush();
         active_input = 1000;
     }
-    else if (active_input == 'c')
+    else if (active_input == 'c') //return compass Azimuth
     {
         Stop();
         compass.read();
@@ -208,7 +212,7 @@ void loop()
         delay(500);
         active_input = 1000;
     }
-    else if (!stopped)
+    else if (!stopped) //stop
     {
         Stop();
         stopped = true;

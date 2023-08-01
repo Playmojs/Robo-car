@@ -61,15 +61,14 @@ while 1:
     if ser.in_waiting == 0:
         continue
     decoder = ser.read_until(b':', 2).decode()
-    print(decoder)
     if decoder == 'V:':
         print(DecodeInput(ser.readline()).split(":")[0])
     elif decoder == 'D:':
+        direction = int(ser.read_until(b':').decode().split(":")[0])
+        print("Direction: ", direction)
         num_scans = int(ser.read_until(b':').decode().split(":")[0])
-        print(num_scans)
+        print("Number of scans: ", num_scans)
         input = ser.read(num_scans*4)
-        print(len(input))
-        print(input)
         visual_data = ByteStringToArray(input, num_scans)
         active_input = 1000
         print(visual_data)
@@ -78,5 +77,3 @@ while 1:
         input = ser.read_until(b':')
         print(input[0:-1].decode())
         active_input = 1000
-    else:
-        print(decoder)
